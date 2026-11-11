@@ -19,7 +19,9 @@
 
 We study the Cauchy–Riemann nodal geometry and prime-simplex integrals of Riemann's completed zeta function $\Xi(t-\mathrm{i}d)=R(d,t)+\mathrm{i}I(d,t)$ ($d\ge 0$). First, we place the local dichotomy along bounded nodal arcs of $\lbrace I=0\rbrace$ within the critical-point index theory of Craven, Csordas, and Smith (1987) and Ki and Kim (2000): an off-critical zero on a critical-line nodal branch requires either a critical-line Laguerre defect $c _ 1(\tau _ {\star})=-\Xi(\tau _ {\star})\Xi''(\tau _ {\star})\le 0$ (certified for the first five off-critical zeros of the self-dual Davenport–Heilbronn function $\Xi _ {\mathrm{DH}}$) or an interior critical point $\Xi'(z _ c)=0$ in $d>0$, while unbounded hairpin components require Phragmén–Lindelöf control and ruling out $\Xi'=0$ on $d>0$ is comparable in difficulty to the Riemann Hypothesis. Second, Green's first identity proves an unconditional 50%–50% Dirichlet–Neumann chamber equipartition
 
-$$\int _ {\tau _ k(d _ 0)}^{\tau _ {k+1}(d _ 0)} R \partial _ d R \mathrm{d}t \equiv \int _ {\tau _ k(d _ 0)}^{\tau _ {k+1}(d _ 0)} I \partial _ d I \mathrm{d}t \equiv \iint _ {\Omega _ k(d _ 0)} \lvert \Xi'(t-\mathrm{i}d)\rvert^2 \mathrm{d}d \mathrm{d}t = \frac{1}{2}\mathcal{W} _ {\Omega _ k}(d _ 0) > 0$$
+$$
+\int _ {\tau _ k(d _ 0)}^{\tau _ {k+1}(d _ 0)} R \partial _ d R \mathrm{d}t \equiv \int _ {\tau _ k(d _ 0)}^{\tau _ {k+1}(d _ 0)} I \partial _ d I \mathrm{d}t \equiv \iint _ {\Omega _ k(d _ 0)} \lvert \Xi'(t-\mathrm{i}d)\rvert^2 \mathrm{d}d \mathrm{d}t = \frac{1}{2}\mathcal{W} _ {\Omega _ k}(d _ 0) > 0
+$$
 
 coupled with Wronskian–slope reciprocity $\tau _ k'(d)\equiv R \partial _ t R / W(d,\tau _ k(d))$. Third, exact Euler dilogarithm $\mathrm{Li} _ 2(2\theta)$ integrals show that whereas factorized weights give $\eta _ {\mathrm{fac}}^{(2)}(1/6)=0.676891>1/2$, the true additive semiprime Wronskian weight $(1-u-v)^2$ drops to $\eta _ {\mathrm{add}}^{(2)}(1/6)=0.150604<1/2$.
 
