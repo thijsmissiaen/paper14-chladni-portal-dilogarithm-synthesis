@@ -1,5 +1,6 @@
 # Nodal Chamber Equipartition, Critical-Point Index Dichotomy, and Weighted Prime-Simplex Dilogarithm Integrals for Riemann's $\Xi$ Function
 
+**DOI (Zenodo / CERN):** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24141095.svg)](https://doi.org/10.5281/zenodo.24141095) [`10.5281/zenodo.24141095`](https://doi.org/10.5281/zenodo.24141095) (v14.1.0: [`10.5281/zenodo.24141096`](https://doi.org/10.5281/zenodo.24141096))  
 **Author:** Thijs Missiaen ([thijs.missiaen@gmail.com](mailto:thijs.missiaen@gmail.com))  
 **Affiliation:** Independent Researcher, Belgium  
 **ORCID:** [0009-0007-3678-0810](https://orcid.org/0009-0007-3678-0810)  
