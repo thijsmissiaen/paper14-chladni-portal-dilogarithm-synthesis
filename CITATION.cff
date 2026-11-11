@@ -6,7 +6,7 @@ authors:
     given-names: "Thijs"
     orcid: "https://orcid.org/0009-0007-3678-0810"
 date-released: "2026-11-11"
-version: "1.1.0"
+version: "14.1.0"
 license: "MIT"
 repository-code: "https://github.com/thijsmissiaen/paper14-chladni-portal-dilogarithm-synthesis"
 keywords:
