@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Standalone Reproducible Verification & Figure Generation Suite for Flagship Paper XIV:
-"The Chladni Portal-Frame Synthesis: Codimension-Three Saddle Overdetermination,
-Green-Dirichlet-Neumann Chamber Equipartition, and Euler Dilogarithm Li_2(2*theta)
-Horizon Damping for Riemann's Xi-Function"
+Standalone Reproducible Verification & Figure Generation Suite for Paper XIV:
+"Nodal Chamber Equipartition, Critical-Point Index Dichotomy, and Weighted
+Prime-Simplex Dilogarithm Integrals for Riemann's Xi-Function"
 
 Author: Thijs Missiaen (Independent Researcher, Belgium)
 ORCID:  https://orcid.org/0009-0007-3678-0810
@@ -11,6 +10,7 @@ ORCID:  https://orcid.org/0009-0007-3678-0810
 Precision Standards:
 - 65-decimal arbitrary-precision arithmetic (`mpmath.mp.dps = 65`)
 - 35-decimal directed-rounding interval arithmetic (`mpmath.iv.dps = 35`)
+- Canonical Wronskian normalization: W(d,t) = (1/2) d_d |F(t-id)|^2 = d * W_tilde(d,t)
 - Generates two 4-panel 300-DPI publication figures (`< 500 KB` PDF + PNG)
 """
 
@@ -234,12 +234,12 @@ GL18_X, GL18_W = gl_nodes(18)
 
 # ==============================================================================
 # MODULE 1 (SECTION 2 — MACRO-SCALE):
-# PORTAL-FRAME DICHOTOMY & CODIMENSION-3 SADDLE OVERDETERMINATION
+# NODAL CHAMBER DICHOTOMY & CRITICAL-POINT INDEX AUDIT
 # ==============================================================================
 
 def verify_section2_macro_portal_frame():
     print("\n" + "=" * 88)
-    print("MODULE 1 [SECTION 2 — MACRO-SCALE]: PORTAL-FRAME DICHOTOMY & 3-EQ OVERDETERMINATION")
+    print("MODULE 1 [SECTION 2 — MACRO-SCALE]: NODAL CHAMBER DICHOTOMY & CRITICAL-POINT INDEX AUDIT")
     print("=" * 88)
 
     # Part A: First 5 off-critical zeros of Davenport-Heilbronn Xi_DH(z) in t in [10, 260]
@@ -716,10 +716,35 @@ def M_tri_closed(theta: mp.mpf, p: int) -> mp.mpf:
     return M0 - 2 * H_p * mp.log((1 - tau) / tau) + 2 * S2_p + poly_sum
 
 
+def M_tri_add_closed(theta: mp.mpf, p: int) -> mp.mpf:
+    """Exact closed form for additive semiprime kernel (1 - u - v)^p / (u*v) on Delta_tau."""
+    tau = 2 * theta
+    if tau >= mp.mpf("0.5"):
+        return mp.mpf("0")
+    M0 = mp.log(tau)**2 + 2 * mp.polylog(2, tau) - (mp.pi**2) / 6
+    if p == 0:
+        return M0
+    if p == 1:
+        return M0 - 2 * (1 - tau) * mp.log((1 - tau) / tau) + 2 * (1 - 2 * tau)
+    if p == 2:
+        return (
+            M0
+            - (1 - tau) * (3 - tau) * mp.log((1 - tau) / tau)
+            + (mp.mpf(7) / 2 - 2 * tau) * (1 - 2 * tau)
+        )
+    raise ValueError(f"Unsupported p={p} for M_tri_add_closed")
+
+
 def eta_closed(theta: mp.mpf, p: int) -> mp.mpf:
     if theta >= mp.mpf("0.25"):
         return mp.mpf("0")
     return M_tri_closed(theta, p) / M_sq_closed(theta, p)
+
+
+def eta_add_closed(theta: mp.mpf, p: int) -> mp.mpf:
+    if theta >= mp.mpf("0.25"):
+        return mp.mpf("0")
+    return M_tri_add_closed(theta, p) / M_sq_closed(theta, p)
 
 
 def verify_section4_micro_dilogarithm():
@@ -767,6 +792,48 @@ def verify_section4_micro_dilogarithm():
             f"eta^({p})(1/6)={mp.nstr(eta_val, 18)} | Tri/Corn={mp.nstr(rat_val, 14)} | "
             f"quad_err={mp.nstr(q_err, 3)}"
         )
+
+    # Verify true additive semiprime kernel (1 - u - v)^p / (u*v) for p = 1, 2 at theta = 1/6 and theta = 0.15
+    print("\n--- Part 3A-bis: Additive Semiprime Weight (1 - u - v)^p vs Factorized Weight (1 - u)^p (1 - v)^p ---")
+    for th_test in [th16, mp.mpf("0.15")]:
+        tau_test = 2 * th_test
+        for p_add in [1, 2]:
+            m_add = M_tri_add_closed(th_test, p_add)
+            m_fac = M_tri_closed(th_test, p_add)
+            msq_a = M_sq_closed(th_test, p_add)
+            # 2D Gauss-Legendre verification of additive simplex integral
+            quad_add = mp.mpf("0")
+            n_sub = 6
+            du_s = (1 - 2 * tau_test) / n_sub
+            for s1 in range(n_sub):
+                u_l = tau_test + s1 * du_s
+                h1 = du_s / 2
+                m1 = u_l + h1
+                for x1, w1 in zip(GL24_X, GL24_W):
+                    u_v = m1 + h1 * x1
+                    dv_s = (1 - u_v - tau_test) / n_sub
+                    inner_a = mp.mpf("0")
+                    for s2 in range(n_sub):
+                        v_l = tau_test + s2 * dv_s
+                        h2 = dv_s / 2
+                        m2 = v_l + h2
+                        for x2, w2 in zip(GL24_X, GL24_W):
+                            v_v = m2 + h2 * x2
+                            inner_a += h2 * w2 * ((1 - u_v - v_v) ** p_add) / (u_v * v_v)
+                    quad_add += h1 * w1 * inner_a
+            err_add = abs(m_add - quad_add) / m_add
+            assert err_add < mp.mpf("1e-58")
+            if p_add == 1:
+                exact_diff = ((1 - 2 * tau_test) ** 2) / 2
+                assert abs((m_fac - m_add) - exact_diff) < mp.mpf("1e-60")
+            elif p_add == 2:
+                exact_diff = ((1 - 2 * tau_test) ** 2) * (3 - 4 * tau_test) / 8
+                assert abs((m_fac - m_add) - exact_diff) < mp.mpf("1e-60")
+            print(
+                f"  tau={mp.nstr(tau_test, 6)} p={p_add} | M_add={mp.nstr(m_add, 16)} | "
+                f"M_fac={mp.nstr(m_fac, 16)} | M_add/M_fac={mp.nstr(m_add / m_fac, 10)} | "
+                f"M_add/I_p^2={mp.nstr(m_add / msq_a, 10)} | quad_err={mp.nstr(err_add, 3)}"
+            )
 
     # Critical thresholds theta_{*,50%}^{(p)} and theta_{*,75%}^{(p)}
     c_theta = mp.mpf("1.000028")
@@ -990,15 +1057,15 @@ def generate_publication_figures(sec2_data, sec3_data, sec4_data):
     ax.plot(0.0, tau_f_f, "o", color="#003399", markersize=6.5, label=rf"Anchor $\tau_{{\mathrm{{false}}}}(0)={tau_f_f:.2f}$ ($c_1^{{\mathrm{{DH}}}}<0$)")
     ax.plot(d_star_f, g_star_f, "*", color="#ffcc00", markeredgecolor="black", markersize=11, label=rf"Off-line zero $(d_*,\gamma_*)=({d_star_f:.3f},{g_star_f:.2f})$")
     ax.plot(d_tip_f, t_tip_f, "s", color="#cc0000", markersize=6.0, label=rf"Fold tip $(d_{{\mathrm{{tip}}}},t_{{\mathrm{{tip}}}})=({d_tip_f:.3f},{t_tip_f:.2f})$")
-    ax.plot([], [], "-", color="#003399", linewidth=2.0, label=r"Chladni walls $I_{\mathrm{DH}}(d,t)=0$")
+    ax.plot([], [], "-", color="#003399", linewidth=2.0, label=r"Nodal walls $I_{\mathrm{DH}}(d,t)=0$")
     ax.plot([], [], "--", color="#cc0000", linewidth=1.8, label=r"Real nodal curves $R_{\mathrm{DH}}(d,t)=0$")
     ax.set_xlabel(r"Transverse distance $d = \sigma - 1/2$")
     ax.set_ylabel(r"Spectral height $t$")
-    ax.set_title(r"(a) Portal-Frame Case-I Forcing & Detached Fold in $\Xi_{\mathrm{DH}}(z)$")
+    ax.set_title(r"(a) Case-I Critical-Line Defect & Detached Fold in $\Xi_{\mathrm{DH}}(z)$")
     ax.legend(loc="lower left", framealpha=0.92, fontsize=7.1)
     ax.grid(True, linestyle=":", alpha=0.35)
 
-    # Panel (b): Codimension-3 interior saddle overdetermination (3 equations in 2 unknowns)
+    # Panel (b): Synthetic polynomial perturbation Xi_def(z) = Xi(z)((z-gamma_0)^2 + d_0^2)
     ax = axes1[0, 1]
     s_rows = sec2_data["saddle_rows"]
     x_pos = np.arange(len(s_rows))
@@ -1008,17 +1075,17 @@ def generate_publication_figures(sec2_data, sec3_data, sec4_data):
     c1_vals = [abs(float(r["c1_def_sc2"])) for r in s_rows]
 
     w_bar = 0.27
-    ax.bar(x_pos - w_bar, eq1_vals, width=w_bar, color="#b2182b", label=r"Eq. (1) Residual $S_c|I_{\mathrm{def}}(d_c,t_c)| \neq 0$")
+    ax.bar(x_pos - w_bar, eq1_vals, width=w_bar, color="#b2182b", label=r"Saddle $|S_c I_{\mathrm{def}}(d_c,t_c)| \neq 0$")
     ax.bar(x_pos, c1_vals, width=w_bar, color="#2166ac", label=r"$d=0$ Defect $S_0^2|c_1^{\mathrm{def}}(\gamma_0)|$ ($c_1^{\mathrm{def}}<0$)")
-    ax.bar(x_pos + w_bar, grad_vals, width=w_bar, color="#4d9221", label=r"Eqs. (2)--(3) $S_c|\nabla I_{\mathrm{def}}(d_c,t_c)| = 0$")
+    ax.bar(x_pos + w_bar, grad_vals, width=w_bar, color="#4d9221", label=r"Saddle $S_c|\nabla I_{\mathrm{def}}(d_c,t_c)| = 0$")
     ax.set_yscale("log")
     ax.set_ylim(1e-62, 1e6)
     ax.axhline(1e-55, color="black", linestyle="--", linewidth=0.9, label="60-dps numerical zero floor")
     ax.set_xticks(x_pos)
     ax.set_xticklabels(labels_b)
-    ax.set_xlabel(r"Deformation parameters $(\gamma_0, d_0)$ with interior saddle $\Xi_{\mathrm{def}}'(z_c)=0$")
+    ax.set_xlabel(r"Perturbation parameters $(\gamma_0, d_0)$ in $\Xi_{\mathrm{def}}(z)=\Xi(z)((z-\gamma_0)^2+d_0^2)$")
     ax.set_ylabel("Rescaled magnitude (logarithmic scale)")
-    ax.set_title(r"(b) Codimension-3 Saddle Overdetermination ($I(d_c,t_c) \neq 0$ at $\nabla I = 0$)")
+    ax.set_title(r"(b) Critical-Point Index Test ($I_{\mathrm{def}}(d_c,t_c) \neq 0$ at $\Xi_{\mathrm{def}}'=0$)")
     ax.legend(loc="center right", framealpha=0.92, fontsize=7.2)
     ax.grid(True, linestyle=":", alpha=0.4)
 
@@ -1141,33 +1208,33 @@ def generate_publication_figures(sec2_data, sec3_data, sec4_data):
 
     ax.axhline(0.0, color="black", linewidth=0.8)
     ax.set_ylim(-0.03, 0.65)
-    ax.set_xlabel(r"Anti-phase prime-gauge coordinate $U = \mathrm{Re}\,\mathcal{P}_{>X}(s)$ ($V=0$)")
-    ax.set_ylabel(r"Spring energy $|1 + U + \frac{\eta}{2}U^2|^2$")
-    ax.set_title(r"(a) Attenuated Semiprime Spring Floor $(1-\frac{1}{2\eta})^2 > 0$ ($\eta > 1/2$)")
+    ax.set_xlabel(r"Real coordinate $U$ along $V=0$")
+    ax.set_ylabel(r"Quadratic modulus $|1 + U + \frac{\eta}{2}U^2|^2$")
+    ax.set_title(r"(a) Toy Quadratic Polynomial $|1+U+\frac{\eta}{2}U^2|^2$ vs. $\eta$")
     ax.legend(loc="upper right", framealpha=0.92, fontsize=7.2)
     ax.grid(True, linestyle=":", alpha=0.4)
 
-    # Panel (b): Exact Euler Dilogarithm Li_2(2*theta) Curves eta^{(p)}(theta) for p = 0, 1, 2, 3
+    # Panel (b): Exact Euler Dilogarithm Li_2(2*theta) Curves eta^{(p)}(theta) vs Additive Semiprime Ratio
     ax = axes2[0, 1]
     th_grid = np.linspace(0.05, 0.248, 160)
     for p_idx, col_p, ls_p, lbl_p in [
-        (0, "#7f7f7f", "--", r"$p=0$ Unweighted $\eta^{(0)}(\theta)$ ($\eta^{(0)}(1/6)=24.40\%$)"),
-        (1, "#ff7f00", "-.", r"$p=1$ Linear $\eta^{(1)}(\theta)$ ($\eta^{(1)}(1/6)=49.56\%$)"),
-        (2, "#1f78b4", "-", r"$p=2$ Quadratic Wronskian $\eta^{(2)}(\theta)$ ($\eta^{(2)}(1/6)=67.69\%$)"),
-        (3, "#33a02c", "-", "$p=3$ Cubic Wigner\u2013Sinh $\\eta^{(3)}(\\theta)$ ($\\eta^{(3)}(1/6)=79.81\\%$)"),
+        (0, "#7f7f7f", "--", r"$p=0$ Unweighted $\eta^{(0)}(\theta)$ ($\eta^{(0)}(1/6)=0.2440$)"),
+        (1, "#ff7f00", "-.", r"$p=1$ Factorized $\eta^{(1)}(\theta)$ ($\eta^{(1)}(1/6)=0.4956$)"),
+        (2, "#1f78b4", "-", r"$p=2$ Factorized $\eta^{(2)}(\theta)$ ($\eta^{(2)}(1/6)=0.6769$)"),
+        (3, "#33a02c", "-", r"$p=3$ Factorized $\eta^{(3)}(\theta)$ ($\eta^{(3)}(1/6)=0.7981$)"),
     ]:
         y_vals = [float(eta_closed(mp.mpf(str(float(x))), p_idx)) for x in th_grid]
-        ax.plot(th_grid, y_vals, linestyle=ls_p, color=col_p, linewidth=2.1, label=lbl_p)
+        ax.plot(th_grid, y_vals, linestyle=ls_p, color=col_p, linewidth=2.0, label=lbl_p)
 
-    ax.axhline(0.50, color="#b2182b", linestyle=":", linewidth=1.4, label=r"$50\%$ Discriminant Threshold ($\eta = 1/2$)")
-    ax.axvline(1.0 / 6.0, color="black", linestyle="--", linewidth=1.1, label=r"Cubic window $\theta = 1/6 = 0.1667$")
-    ax.axvline(sec4_data["th_Wpure_inf"], color="#6a3d9a", linestyle=":", linewidth=1.3, label=rf"$\theta_{{\mathrm{{W-pure}}}}^\infty = {sec4_data['th_Wpure_inf']:.4f}$")
-    ax.plot(sec4_data["th50_2"], 0.50, "D", color="#1f78b4", markersize=6.5, label=rf"$\theta_{{*,50\%}}^{{(2)}} = {sec4_data['th50_2']:.4f}$")
-    ax.plot(sec4_data["th50_3"], 0.50, "s", color="#33a02c", markersize=6.5, label=rf"$\theta_{{*,50\%}}^{{(3)}} = {sec4_data['th50_3']:.4f}$")
-    ax.set_xlabel(r"Prime-gauge sieve exponent $\theta = \ln X / \ln(t/2\pi)$")
-    ax.set_ylabel(r"Forward-triangle capture fraction $\eta^{(p)}(\theta)$")
-    ax.set_title(r"(b) Exact Euler Dilogarithm $\mathrm{Li}_2(2\theta)$ Laws $\eta^{(p)}(\theta)$")
-    ax.legend(loc="lower left", framealpha=0.92, fontsize=6.8)
+    y_add2 = [float(eta_add_closed(mp.mpf(str(float(x))), 2)) for x in th_grid]
+    ax.plot(th_grid, y_add2, linestyle=":", color="#d62728", linewidth=2.2, label=r"$p=2$ Additive $(1-u-v)^2$ ($\eta_{\mathrm{add}}^{(2)}(1/6)=0.1506$)")
+    ax.axhline(0.50, color="#b2182b", linestyle=":", linewidth=1.2, label=r"Reference level $\eta = 1/2$")
+    ax.axvline(1.0 / 6.0, color="black", linestyle="--", linewidth=1.1, label=r"Sieve exponent $\theta = 1/6$")
+    ax.plot(sec4_data["th50_2"], 0.50, "D", color="#1f78b4", markersize=6.0, label=rf"$\theta_{{*,50\%}}^{{(2)}} = {sec4_data['th50_2']:.4f}$")
+    ax.set_xlabel(r"Sieve exponent $\theta = \ln X / \ln(t/2\pi)$")
+    ax.set_ylabel(r"Simplex-to-square ratio $\eta(\theta)$")
+    ax.set_title(r"(b) Factorized vs. Additive $\mathrm{Li}_2(2\theta)$ Simplex Ratios")
+    ax.legend(loc="lower left", framealpha=0.92, fontsize=6.6)
     ax.grid(True, linestyle=":", alpha=0.4)
 
     # Panel (c): Discrete Prime Sums vs Continuous Li_2(2*theta) Asymptote up to N_* = 10^5
@@ -1232,7 +1299,7 @@ def generate_publication_figures(sec2_data, sec3_data, sec4_data):
 def main():
     t0_all = time.perf_counter()
     print("=" * 88)
-    print("FLAGSHIP PAPER XIV: THE CHLADNI PORTAL-FRAME SYNTHESIS VERIFICATION SUITE")
+    print("PAPER XIV: NODAL CHAMBER EQUIPARTITION, CRITICAL-POINT INDEX & DILOGARITHM SUITE")
     print(f"Working Precision: mpmath.mp.dps = {mp.mp.dps}, mpmath.iv.dps = {mp.iv.dps}")
     print("=" * 88)
 
